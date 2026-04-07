@@ -22,9 +22,16 @@ const app = express();
 const server = http.createServer(app);
 
 // Initialize Socket.io
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:5174',
+  'http://localhost:5175',
+  process.env.CLIENT_URL
+].filter(Boolean);
+
 const io = new Server(server, {
   cors: {
-    origin: true,
+    origin: allowedOrigins,
     methods: ['GET', 'POST'],
     credentials: true
   }
@@ -35,8 +42,8 @@ app.set('io', io);
 
 // ─── Middleware ─────────────────────────────────────────────
 app.use(cors({
-  origin: true,
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  origin: "https://weather-front-theta.vercel.app",
+  methods: ["GET","POST","PUT","DELETE"],
   credentials: true
 }));
 app.use(express.json({ limit: '10mb' }));
