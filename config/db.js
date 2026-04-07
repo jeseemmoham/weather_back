@@ -1,6 +1,13 @@
 const mongoose = require('mongoose');
 
+// Use a variable to cache the connection
+let cachedServerlessConn = null;
+
 const connectDB = async () => {
+  if (cachedServerlessConn) {
+    return cachedServerlessConn;
+  }
+
   try {
     const conn = await mongoose.connect(process.env.MONGODB_URI, {
       serverSelectionTimeoutMS: 30000,
@@ -9,6 +16,7 @@ const connectDB = async () => {
       family: 4, // Force IPv4 (fixes DNS issues on Windows)
     });
 
+    cachedServerlessConn = conn;
     console.log(`✅ MongoDB Atlas Connected: ${conn.connection.host}`);
 
     mongoose.connection.on('error', (err) => {
@@ -17,17 +25,13 @@ const connectDB = async () => {
 
     mongoose.connection.on('disconnected', () => {
       console.warn('⚠️  MongoDB disconnected. Attempting to reconnect...');
+      cachedServerlessConn = null;
     });
 
-    mongoose.connection.on('reconnected', () => {
-      console.log('✅ MongoDB reconnected successfully');
-    });
-
+    return conn;
   } catch (error) {
     console.error(`❌ MongoDB connection failed: ${error.message}`);
-    console.error('💡 Make sure your MONGODB_URI in .env is correct.');
-    console.error('💡 Get a free cluster at https://www.mongodb.com/atlas');
-    process.exit(1);
+    throw error; // Let the handler manage the error
   }
 };
 

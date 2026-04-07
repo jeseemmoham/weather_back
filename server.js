@@ -21,11 +21,12 @@ const adminRoutes = require('./routes/admin');
 const app = express();
 const server = http.createServer(app);
 
-// ─── CORS FIX (FINAL VERSION) ──────────────────────────────
+// ─── CORS CONFIGURATION ──────────────────────────────────
 const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:5174',
   'http://localhost:5175',
+  'http://localhost:3000',
   ...(process.env.CLIENT_URL
     ? process.env.CLIENT_URL.split(',').map(o => o.trim())
     : [])
@@ -33,29 +34,45 @@ const allowedOrigins = [
 
 const corsOptions = {
   origin: (origin, callback) => {
-    // Allow requests with no origin (Postman, mobile apps, etc.)
+    // ✅ Allow requests with no origin (Postman, mobile apps, curl, etc.)
     if (!origin) return callback(null, true);
 
-    // Allow localhost + env URLs
+    // ✅ Allow specific localhost ports for development
+    if (origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:')) {
+      return callback(null, true);
+    }
+
+    // ✅ Allow configured URLs from env
     if (allowedOrigins.includes(origin)) {
       return callback(null, true);
     }
 
-    // ✅ Allow ALL Vercel deployments (fixes your issue)
+    // ✅ Allow ALL Vercel deployments (*.vercel.app)
     if (origin.includes('.vercel.app')) {
       return callback(null, true);
     }
 
-    return callback(new Error('Not allowed by CORS'));
+    // ✅ Allow ngrok tunnels for testing
+    if (origin.includes('ngrok') || origin.includes('ngrok.io')) {
+      return callback(null, true);
+    }
+
+    // Reject unknown origins (but log for debugging)
+    console.warn(`⚠️  CORS blocked origin: ${origin}`);
+    return callback(new Error(`Not allowed by CORS: ${origin}`));
   },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  maxAge: 86400
 };
 
-// Socket.io CORS
+// Socket.io CORS configuration (mirrors app CORS)
 const io = new Server(server, {
-  cors: corsOptions
+  cors: corsOptions,
+  transports: ['websocket', 'polling'],  // ✅ Support both WebSocket and polling for Vercel
+  pingInterval: 25000,
+  pingTimeout: 60000
 });
 
 // Make io accessible in routes
