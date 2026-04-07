@@ -42,7 +42,8 @@ app.set('io', io);
 
 // ─── Middleware ─────────────────────────────────────────────
 app.use(cors({
-  origin: allowedOrigins,
+  origin: "https://weather-front-theta.vercel.app",
+  methods: ["GET","POST","PUT","DELETE"],
   credentials: true
 }));
 app.use(express.json({ limit: '10mb' }));
