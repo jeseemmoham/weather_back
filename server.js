@@ -21,31 +21,52 @@ const adminRoutes = require('./routes/admin');
 const app = express();
 const server = http.createServer(app);
 
-// Initialize Socket.io
+// ─── CORS FIX (FINAL VERSION) ──────────────────────────────
 const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:5174',
   'http://localhost:5175',
-  process.env.CLIENT_URL
+  ...(process.env.CLIENT_URL
+    ? process.env.CLIENT_URL.split(',').map(o => o.trim())
+    : [])
 ].filter(Boolean);
 
+const corsOptions = {
+  origin: (origin, callback) => {
+    // Allow requests with no origin (Postman, mobile apps, etc.)
+    if (!origin) return callback(null, true);
+
+    // Allow localhost + env URLs
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+
+    // ✅ Allow ALL Vercel deployments (fixes your issue)
+    if (origin.includes('.vercel.app')) {
+      return callback(null, true);
+    }
+
+    return callback(new Error('Not allowed by CORS'));
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+};
+
+// Socket.io CORS
 const io = new Server(server, {
-  cors: {
-    origin: allowedOrigins,
-    methods: ['GET', 'POST'],
-    credentials: true
-  }
+  cors: corsOptions
 });
 
 // Make io accessible in routes
 app.set('io', io);
 
-// ─── Middleware ─────────────────────────────────────────────
-app.use(cors({
-  origin: "https://weather-front-theta.vercel.app",
-  methods: ["GET","POST","PUT","DELETE"],
-  credentials: true
-}));
+// Apply CORS middleware
+app.use(cors(corsOptions));
+
+// ✅ IMPORTANT: Handle preflight requests
+app.options('*', cors(corsOptions));
+
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
@@ -81,7 +102,16 @@ app.use((req, res) => {
 
 // Global error handler
 app.use((err, req, res, next) => {
-  console.error('Unhandled error:', err);
+  console.error('Unhandled error:', err.message);
+
+  // CORS error handling
+  if (err.message === 'Not allowed by CORS') {
+    return res.status(403).json({
+      success: false,
+      message: 'CORS blocked this request'
+    });
+  }
+
   res.status(500).json({
     success: false,
     message: 'Internal server error'
@@ -93,24 +123,23 @@ const PORT = process.env.PORT || 5000;
 
 async function startServer() {
   try {
-    // Connect to MongoDB Atlas
+    // Connect DB
     await connectDB();
 
-    // Initialize Socket.io handlers
+    // Socket init
     initSocket(io);
 
-    // Initialize email service
+    // Email service
     emailService.init();
 
-    // Seed mock alerts (only if DB is empty)
+    // Seed alerts
     await seedAlerts();
 
-    // Start demo mode if enabled (generates periodic alerts)
+    // Demo mode
     if (process.env.DEMO_MODE === 'true') {
-      startDemoMode(90000); // New mock alert every 90 seconds
+      startDemoMode(90000);
     }
 
-    // Start listening
     server.listen(PORT, () => {
       console.log('');
       console.log('╔══════════════════════════════════════════════════╗');
