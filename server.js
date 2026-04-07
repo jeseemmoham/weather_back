@@ -94,10 +94,10 @@ app.use((req, res, next) => {
 });
 
 // ─── Routes ────────────────────────────────────────────────
-app.use('/auth', authRoutes);
-app.use('/users', userRoutes);
-app.use('/alerts', alertRoutes);
-app.use('/admin', adminRoutes);
+app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/alerts', alertRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {

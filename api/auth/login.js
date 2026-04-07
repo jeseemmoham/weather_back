@@ -1,23 +1,26 @@
 const User = require('../../models/User');
 const jwt = require('jsonwebtoken');
-const { withMiddleware } = require('../../middleware/serverless');
+const connectDB = require('../../config/db');
 
 const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '7d' });
 };
 
 const handler = async (req, res) => {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ success: false, message: 'Method not allowed' });
-  }
-
-  const { email, password } = req.body;
-
-  if (!email || !password) {
-    return res.status(400).json({ success: false, message: 'Email and password are required' });
-  }
-
   try {
+    // Connect to DB
+    await connectDB();
+
+    if (req.method !== 'POST') {
+      return res.status(405).json({ success: false, message: 'Method not allowed' });
+    }
+
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ success: false, message: 'Email and password are required' });
+    }
+
     const user = await User.findOne({ email }).select('+password');
     if (!user) {
       return res.status(401).json({
@@ -56,4 +59,4 @@ const handler = async (req, res) => {
   }
 };
 
-module.exports = withMiddleware(handler);
+module.exports = handler;
