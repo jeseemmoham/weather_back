@@ -26,6 +26,8 @@ const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:5174',
   'http://localhost:5175',
+  'https://weather-front-theta.vercel.app',
+  'https://weather-front-79q5g6dpd-mohamed-jeseem-s-projects.vercel.app',
   process.env.CLIENT_URL
 ].filter(Boolean);
 
@@ -41,8 +43,21 @@ const io = new Server(server, {
 app.set('io', io);
 
 // ─── Middleware ─────────────────────────────────────────────
+const allowedCorsOrigins = [
+  "https://weather-front-theta.vercel.app",
+  "https://weather-front-79q5g6dpd-mohamed-jeseem-s-projects.vercel.app",
+  "http://localhost:5173",
+  "http://localhost:5174"
+];
+
 app.use(cors({
-  origin: "https://weather-front-theta.vercel.app",
+  origin: function (origin, callback) {
+    if (!origin || allowedCorsOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   methods: ["GET","POST","PUT","DELETE"],
   credentials: true
 }));
