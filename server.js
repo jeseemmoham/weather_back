@@ -94,13 +94,13 @@ app.use((req, res, next) => {
 });
 
 // ─── Routes ────────────────────────────────────────────────
-app.use('/api/auth', authRoutes);
-app.use('/api/users', userRoutes);
-app.use('/api/alerts', alertRoutes);
-app.use('/api/admin', adminRoutes);
+app.use('/auth', authRoutes);
+app.use('/users', userRoutes);
+app.use('/alerts', alertRoutes);
+app.use('/admin', adminRoutes);
 
 // Health check endpoint
-app.get('/api/health', (req, res) => {
+app.get('/health', (req, res) => {
   res.json({
     success: true,
     message: '🛡️ Disaster Alert System API is running',
